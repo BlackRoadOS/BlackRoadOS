@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+
+set -eo pipefail
+
+BIN_DIR="/Users/alexa/bin"
+cmd="${1:-help}"
+
+show_help() {
+  if [[ -x "$BIN_DIR/br-help" ]]; then
+    exec "$BIN_DIR/br-help"
+  fi
+
+  echo "Usage: br <command> [args]"
+  echo ""
+  echo "Available commands:"
+  find "$BIN_DIR" -maxdepth 1 -type f \( -name 'br-*' -o -name 'blackroad-*' \) \
+    -exec basename {} \; | sort
+}
+
+run_target() {
+  local target="$1"
+  shift || true
+
+  if [[ -x "$target" ]]; then
+    exec "$target" "$@"
+  fi
+
+  if [[ -f "$target" ]]; then
+    exec bash "$target" "$@"
+  fi
+
+  return 1
+}
+
+case "$cmd" in
+  help|-h|--help|"")
+    show_help
+    ;;
+esac
+
+shift || true
+
+if [[ -f "$BIN_DIR/br-$cmd" ]]; then
+  run_target "$BIN_DIR/br-$cmd" "$@"
+fi
+
+if [[ -f "$BIN_DIR/blackroad-$cmd" ]]; then
+  run_target "$BIN_DIR/blackroad-$cmd" "$@"
+fi
+
+case "$cmd" in
+  status-all|sa)
+    if [[ -f "$BIN_DIR/br-status" ]]; then
+      run_target "$BIN_DIR/br-status" "$@"
+    fi
+    ;;
+  sched)
+    if [[ -f "$BIN_DIR/br-schedule" ]]; then
+      run_target "$BIN_DIR/br-schedule" "$@"
+    fi
+    ;;
+  gen)
+    if [[ -f "$BIN_DIR/br-generate" ]]; then
+      run_target "$BIN_DIR/br-generate" "$@"
+    fi
+    ;;
+  mem)
+    if [[ -f "$BIN_DIR/blackroad-memory" ]]; then
+      run_target "$BIN_DIR/blackroad-memory" "$@"
+    fi
+    ;;
+esac
+
+echo "Unknown BlackRoad command: $cmd" >&2
+echo "Run 'br help' to list available commands." >&2
+exit 127
